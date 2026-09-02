@@ -290,6 +290,34 @@
     return nivel.temas.filter((t) => set.has(t.id)).length;
   }
 
+  // ---------- Exámenes por capítulo ----------
+  const APROBADOS_KEY = "aprende-derecho:aprobados";
+
+  function cargarAprobados() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(APROBADOS_KEY) || "[]"));
+    } catch {
+      return new Set();
+    }
+  }
+
+  function estaAprobado(temaId) {
+    return cargarAprobados().has(temaId);
+  }
+
+  function marcarAprobado(temaId) {
+    const set = cargarAprobados();
+    set.add(temaId);
+    try {
+      localStorage.setItem(APROBADOS_KEY, JSON.stringify(Array.from(set)));
+    } catch {}
+  }
+
+  function aprobadosEnNivel(nivel) {
+    const set = cargarAprobados();
+    return nivel.temas.filter((t) => set.has(t.id)).length;
+  }
+
   // ---------- Favoritos (guardados), separado de "leído" ----------
   const FAVORITOS_KEY = "aprende-derecho:favoritos";
 
@@ -482,6 +510,7 @@
     DESBLOQUEOS_KEY,
     PERFIL_KEY,
     ANUNCIOS_KEY,
+    APROBADOS_KEY,
   ];
 
   function exportarDatos() {
@@ -591,6 +620,9 @@
     if (parts[0] === "nivel" && parts[1]) return { name: "nivel", nivelId: parts[1] };
     if (parts[0] === "paywall" && parts[1]) return { name: "paywall", nivelId: parts[1] };
     if (parts[0] === "tema" && parts[1] && parts[2]) return { name: "tema", nivelId: parts[1], temaId: parts[2] };
+    if (parts[0] === "examen-capitulo" && parts[1] && parts[2]) {
+      return { name: "examen-capitulo", nivelId: parts[1], temaId: parts[2] };
+    }
     if (parts[0] === "quiz" && parts[1]) return { name: "quiz", nivelId: parts[1] };
     if (parts[0] === "recursos") return { name: "recursos" };
     if (parts[0] === "acerca") return { name: "acerca" };
@@ -616,6 +648,7 @@
   backBtn.addEventListener("click", () => {
     const route = parseHash();
     if (route.name === "tema") navigate("/nivel/" + route.nivelId);
+    else if (route.name === "examen-capitulo") navigate("/tema/" + route.nivelId + "/" + route.temaId);
     else if (route.name === "paywall") navigate("/nivel/" + route.nivelId);
     else navigate("/inicio");
   });
@@ -854,7 +887,7 @@
       .join("");
 
     const tieneQuiz = QUIZZES[nivelId] && QUIZZES[nivelId].length > 0;
-    const completo = leidosEnNivel(nivel) === nivel.temas.length;
+    const completo = aprobadosEnNivel(nivel) === nivel.temas.length;
 
     screenEl.innerHTML = `
       <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="${nivel.icono}">
@@ -1102,6 +1135,13 @@
       <button class="mark-read-btn${esLeido(tema.id) ? " mark-read-btn-done" : ""}" id="markReadBtn">
         ${esLeido(tema.id) ? "✓ Leído — quitar marca" : "Marcar capítulo como leído"}
       </button>
+      ${
+        EXAMENES[tema.id]
+          ? estaAprobado(tema.id)
+            ? `<p class="exam-status exam-status-ok">✓ Examen de este capítulo aprobado</p>`
+            : `<button class="hero-cta exam-cta" id="examCapituloBtn">📝 Hacer el examen de este capítulo</button>`
+          : ""
+      }
       <div class="chapter-nav">
         ${
           anterior
@@ -1139,6 +1179,9 @@
     const muestraBtn = document.getElementById("muestraDesbloquearBtn");
     if (muestraBtn) muestraBtn.addEventListener("click", () => navigate("/nivel/" + nivelId));
 
+    const examBtn = document.getElementById("examCapituloBtn");
+    if (examBtn) examBtn.addEventListener("click", () => navigate("/examen-capitulo/" + nivelId + "/" + temaId));
+
     document.getElementById("textSizeBtn").addEventListener("click", () => {
       aplicarTamanoTexto(siguienteTamanoTexto(obtenerTamanoTexto()));
     });
@@ -1154,6 +1197,98 @@
         notasGuardadoEl.hidden = false;
       }, 500);
     });
+  }
+
+  function screenExamenCapitulo(nivelId, temaId) {
+    const nivel = NIVELES[nivelId];
+    const index = nivel && nivel.temas.findIndex((t) => t.id === temaId);
+    const tema = nivel && index > -1 ? nivel.temas[index] : null;
+    const preguntas = EXAMENES[temaId];
+    if (!nivel || !tema || !preguntas || !preguntas.length) return navigate("/tema/" + nivelId + "/" + temaId);
+    if (!puedeVerTema(nivelId, temaId)) return navigate("/tema/" + nivelId + "/" + temaId);
+
+    topbarTitleEl.textContent = "Examen · " + tema.titulo;
+    setBack(true);
+    setActiveNav(null);
+
+    const preguntasHtml = preguntas
+      .map(
+        (p, i) => `
+      <div class="quiz-question" data-index="${i}">
+        <p class="quiz-question-text">${i + 1}. ${escapeHtml(p.pregunta)}</p>
+        <div class="quiz-options">
+          ${p.opciones
+            .map((op, j) => `<button class="quiz-option" data-opcion="${j}">${escapeHtml(op)}</button>`)
+            .join("")}
+        </div>
+        <p class="quiz-explicacion" hidden></p>
+      </div>`
+      )
+      .join("");
+
+    screenEl.innerHTML = `
+      <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="📝">
+        <h2>📝 Examen: ${escapeHtml(tema.titulo)}</h2>
+        <p>${preguntas.length} preguntas sobre este capítulo. Hay que acertarlas todas para aprobar. Si te queda alguna mal, repasas el capítulo y lo vuelves a intentar — sin límite de intentos.</p>
+      </div>
+      <div id="examQuestions">${preguntasHtml}</div>
+      <div class="quiz-result" id="examResult" hidden>
+        <p class="quiz-result-score" id="examScore"></p>
+        <button class="hero-cta quiz-retry" id="examRetry" hidden>↻ Repasar el capítulo e intentar de nuevo</button>
+        <button class="hero-cta" id="examContinuar" hidden>Continuar →</button>
+      </div>
+    `;
+
+    let respondidas = 0;
+    let correctas = 0;
+
+    screenEl.querySelectorAll(".quiz-question").forEach((qEl) => {
+      const idx = Number(qEl.dataset.index);
+      const p = preguntas[idx];
+      const explicacionEl = qEl.querySelector(".quiz-explicacion");
+      qEl.querySelectorAll(".quiz-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (qEl.classList.contains("quiz-question-answered")) return;
+          qEl.classList.add("quiz-question-answered");
+          const elegida = Number(btn.dataset.opcion);
+          const acerto = elegida === p.correcta;
+          qEl.querySelectorAll(".quiz-option").forEach((otro) => {
+            const op = Number(otro.dataset.opcion);
+            if (op === p.correcta) otro.classList.add("quiz-option-correcta");
+            else if (op === elegida) otro.classList.add("quiz-option-incorrecta");
+          });
+          explicacionEl.textContent = (acerto ? "✓ Correcto. " : "✗ Incorrecto. ") + p.explicacion;
+          explicacionEl.hidden = false;
+          respondidas++;
+          if (acerto) correctas++;
+
+          if (respondidas === preguntas.length) {
+            const resultEl = document.getElementById("examResult");
+            const scoreEl = document.getElementById("examScore");
+            const retryBtn = document.getElementById("examRetry");
+            const continuarBtn = document.getElementById("examContinuar");
+            resultEl.hidden = false;
+            const aprobado = correctas === preguntas.length;
+            if (aprobado) {
+              marcarAprobado(temaId);
+              marcarLeido(temaId, true);
+              registrarDiaEstudio();
+              scoreEl.textContent = `🎉 ¡Aprobaste! ${correctas} de ${preguntas.length} correctas.`;
+              continuarBtn.hidden = false;
+            } else {
+              scoreEl.textContent =
+                `Obtuviste ${correctas} de ${preguntas.length} correctas — no alcanza. Repasa el capítulo y vuelve a intentarlo.`;
+              retryBtn.hidden = false;
+            }
+          }
+        });
+      });
+    });
+
+    const retryBtn = document.getElementById("examRetry");
+    if (retryBtn) retryBtn.addEventListener("click", () => navigate("/tema/" + nivelId + "/" + temaId));
+    const continuarBtn = document.getElementById("examContinuar");
+    if (continuarBtn) continuarBtn.addEventListener("click", () => navigate("/tema/" + nivelId + "/" + temaId));
   }
 
   function screenQuiz(nivelId) {
@@ -1357,9 +1492,9 @@
     setBack(true);
     setActiveNav(null);
 
-    const completo = leidosEnNivel(nivel) === nivel.temas.length;
+    const completo = aprobadosEnNivel(nivel) === nivel.temas.length;
     if (!completo) {
-      screenEl.innerHTML = `<p class="empty-note">Todavía te faltan capítulos de este nivel. ¡Sigue así, ya casi lo logras!</p>`;
+      screenEl.innerHTML = `<p class="empty-note">Todavía te falta aprobar el examen de algunos capítulos de este nivel. ¡Sigue así, ya casi lo logras!</p>`;
       return;
     }
 
@@ -1530,6 +1665,7 @@
     else if (route.name === "nivel") screenNivel(route.nivelId);
     else if (route.name === "paywall") screenPaywall(route.nivelId);
     else if (route.name === "tema") screenTema(route.nivelId, route.temaId);
+    else if (route.name === "examen-capitulo") screenExamenCapitulo(route.nivelId, route.temaId);
     else if (route.name === "quiz") screenQuiz(route.nivelId);
     else if (route.name === "recursos") screenRecursos();
     else if (route.name === "acerca") screenAcerca();
