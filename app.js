@@ -226,6 +226,96 @@
     });
   }
 
+  // ---------- Calculadora de términos procesales (Colombia) ----------
+  function fechaPascua(year) {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+  }
+
+  function sumarDias(fecha, n) {
+    const d = new Date(fecha);
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  function siguienteLunes(fecha) {
+    const dow = fecha.getDay();
+    if (dow === 1) return new Date(fecha);
+    const diff = ((8 - dow) % 7) || 7;
+    return sumarDias(fecha, diff);
+  }
+
+  function mismoDia(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function festivosColombia(year) {
+    const fijos = [
+      new Date(year, 0, 1), // Año Nuevo
+      new Date(year, 4, 1), // Día del Trabajo
+      new Date(year, 6, 20), // Independencia
+      new Date(year, 7, 7), // Batalla de Boyacá
+      new Date(year, 11, 8), // Inmaculada Concepción
+      new Date(year, 11, 25), // Navidad
+    ];
+    const trasladablesFijos = [
+      new Date(year, 0, 6), // Reyes Magos
+      new Date(year, 2, 19), // San José
+      new Date(year, 5, 29), // San Pedro y San Pablo
+      new Date(year, 7, 15), // Asunción de la Virgen
+      new Date(year, 9, 12), // Día de la Raza
+      new Date(year, 10, 1), // Todos los Santos
+      new Date(year, 10, 11), // Independencia de Cartagena
+    ].map(siguienteLunes);
+    const pascua = fechaPascua(year);
+    const movibles = [sumarDias(pascua, -3), sumarDias(pascua, -2)]; // Jueves y Viernes Santo
+    const trasladablesPascua = [
+      sumarDias(pascua, 40), // Ascensión
+      sumarDias(pascua, 61), // Corpus Christi
+      sumarDias(pascua, 68), // Sagrado Corazón
+    ].map(siguienteLunes);
+    return [...fijos, ...trasladablesFijos, ...movibles, ...trasladablesPascua];
+  }
+
+  function esFestivoColombia(fecha) {
+    return festivosColombia(fecha.getFullYear()).some((f) => mismoDia(f, fecha));
+  }
+
+  function esDiaHabil(fecha) {
+    const dow = fecha.getDay();
+    if (dow === 0 || dow === 6) return false;
+    return !esFestivoColombia(fecha);
+  }
+
+  function calcularFechaLimite(fechaInicioStr, cantidadDias, tipo) {
+    const inicio = new Date(fechaInicioStr + "T00:00:00");
+    if (isNaN(inicio.getTime())) return null;
+    let fecha = new Date(inicio);
+    if (tipo === "calendario") {
+      fecha = sumarDias(fecha, cantidadDias);
+      return fecha;
+    }
+    let restantes = cantidadDias;
+    while (restantes > 0) {
+      fecha = sumarDias(fecha, 1);
+      if (esDiaHabil(fecha)) restantes--;
+    }
+    return fecha;
+  }
+
   function findRecurso(nombre) {
     return RECURSOS_OFICIALES.find((r) => r.nombre === nombre);
   }
@@ -316,6 +406,47 @@
   function aprobadosEnNivel(nivel) {
     const set = cargarAprobados();
     return nivel.temas.filter((t) => set.has(t.id)).length;
+  }
+
+  // Límite de intentos de examen: 3 por capítulo por día, para incentivar repasar de verdad
+  // en vez de adivinar a lo bruto hasta acertar.
+  const INTENTOS_KEY = "aprende-derecho:intentos-examen";
+  const MAX_INTENTOS_DIA = 3;
+
+  function fechaHoy() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function cargarIntentos() {
+    try {
+      return JSON.parse(localStorage.getItem(INTENTOS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function intentosUsadosHoy(temaId) {
+    const registro = cargarIntentos()[temaId];
+    if (!registro || registro.fecha !== fechaHoy()) return 0;
+    return registro.intentos;
+  }
+
+  function intentosRestantesHoy(temaId) {
+    return Math.max(0, MAX_INTENTOS_DIA - intentosUsadosHoy(temaId));
+  }
+
+  function registrarIntentoExamen(temaId) {
+    const datos = cargarIntentos();
+    const hoy = fechaHoy();
+    const registro = datos[temaId];
+    if (registro && registro.fecha === hoy) {
+      registro.intentos += 1;
+    } else {
+      datos[temaId] = { fecha: hoy, intentos: 1 };
+    }
+    try {
+      localStorage.setItem(INTENTOS_KEY, JSON.stringify(datos));
+    } catch {}
   }
 
   // ---------- Favoritos (guardados), separado de "leído" ----------
@@ -511,6 +642,7 @@
     PERFIL_KEY,
     ANUNCIOS_KEY,
     APROBADOS_KEY,
+    INTENTOS_KEY,
   ];
 
   function exportarDatos() {
@@ -625,6 +757,9 @@
     }
     if (parts[0] === "quiz" && parts[1]) return { name: "quiz", nivelId: parts[1] };
     if (parts[0] === "recursos") return { name: "recursos" };
+    if (parts[0] === "calculadora") return { name: "calculadora" };
+    if (parts[0] === "plantillas") return { name: "plantillas" };
+    if (parts[0] === "plantilla" && parts[1]) return { name: "plantilla", plantillaId: parts[1] };
     if (parts[0] === "acerca") return { name: "acerca" };
     if (parts[0] === "glosario") return { name: "glosario" };
     if (parts[0] === "guardados") return { name: "guardados" };
@@ -650,6 +785,8 @@
     if (route.name === "tema") navigate("/nivel/" + route.nivelId);
     else if (route.name === "examen-capitulo") navigate("/tema/" + route.nivelId + "/" + route.temaId);
     else if (route.name === "paywall") navigate("/nivel/" + route.nivelId);
+    else if (route.name === "plantilla") navigate("/plantillas");
+    else if (route.name === "calculadora" || route.name === "plantillas") navigate("/recursos");
     else navigate("/inicio");
   });
 
@@ -1139,7 +1276,9 @@
         EXAMENES[tema.id]
           ? estaAprobado(tema.id)
             ? `<p class="exam-status exam-status-ok">✓ Examen de este capítulo aprobado</p>`
-            : `<button class="hero-cta exam-cta" id="examCapituloBtn">📝 Hacer el examen de este capítulo</button>`
+            : intentosRestantesHoy(tema.id) > 0
+              ? `<button class="hero-cta exam-cta" id="examCapituloBtn">📝 Hacer el examen (${intentosRestantesHoy(tema.id)}/${MAX_INTENTOS_DIA} intentos hoy)</button>`
+              : `<p class="exam-status">⏳ Sin intentos hoy — vuelve mañana</p>`
           : ""
       }
       <div class="chapter-nav">
@@ -1211,6 +1350,18 @@
     setBack(true);
     setActiveNav(null);
 
+    if (intentosRestantesHoy(temaId) <= 0) {
+      screenEl.innerHTML = `
+        <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="⏳">
+          <h2>⏳ Ya usaste tus ${MAX_INTENTOS_DIA} intentos de hoy</h2>
+          <p>Para este capítulo alcanzas de nuevo mañana. Mientras tanto, repasa el contenido con calma — así el próximo intento rinde más.</p>
+        </div>
+        <button class="hero-cta" id="examVolverBtn">← Volver al capítulo</button>
+      `;
+      document.getElementById("examVolverBtn").addEventListener("click", () => navigate("/tema/" + nivelId + "/" + temaId));
+      return;
+    }
+
     const preguntasHtml = preguntas
       .map(
         (p, i) => `
@@ -1229,7 +1380,7 @@
     screenEl.innerHTML = `
       <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="📝">
         <h2>📝 Examen: ${escapeHtml(tema.titulo)}</h2>
-        <p>${preguntas.length} preguntas sobre este capítulo. Hay que acertarlas todas para aprobar. Si te queda alguna mal, repasas el capítulo y lo vuelves a intentar — sin límite de intentos.</p>
+        <p>${preguntas.length} preguntas sobre este capítulo. Hay que acertarlas todas para aprobar. Si te queda alguna mal, repasas el capítulo y lo vuelves a intentar. Te quedan <strong>${intentosRestantesHoy(temaId)} de ${MAX_INTENTOS_DIA} intentos hoy</strong> para este capítulo.</p>
       </div>
       <div id="examQuestions">${preguntasHtml}</div>
       <div class="quiz-result" id="examResult" hidden>
@@ -1263,6 +1414,7 @@
           if (acerto) correctas++;
 
           if (respondidas === preguntas.length) {
+            registrarIntentoExamen(temaId);
             const resultEl = document.getElementById("examResult");
             const scoreEl = document.getElementById("examScore");
             const retryBtn = document.getElementById("examRetry");
@@ -1540,9 +1692,139 @@
         <h2>Fuentes oficiales</h2>
         <p>Sitios del Estado colombiano para consultar leyes, jurisprudencia y trámites directamente en la fuente.</p>
       </div>
+      <div class="section-label">Herramientas</div>
+      <button class="tool-card" id="toolCalculadoraBtn">
+        <span class="tool-card-icon">📅</span>
+        <span class="tool-card-body">
+          <span class="tool-card-title">Calculadora de términos</span>
+          <span class="tool-card-desc">Cuenta días hábiles o calendario para un plazo, con festivos de Colombia incluidos.</span>
+        </span>
+        <span class="chevron">›</span>
+      </button>
+      <button class="tool-card" id="toolPlantillasBtn">
+        <span class="tool-card-icon">📄</span>
+        <span class="tool-card-body">
+          <span class="tool-card-title">Modelos de documentos</span>
+          <span class="tool-card-desc">Derecho de petición, tutela y poder — listos para adaptar y copiar.</span>
+        </span>
+        <span class="chevron">›</span>
+      </button>
       <div class="section-label">Instituciones</div>
       ${cards}
     `;
+
+    document.getElementById("toolCalculadoraBtn").addEventListener("click", () => navigate("/calculadora"));
+    document.getElementById("toolPlantillasBtn").addEventListener("click", () => navigate("/plantillas"));
+  }
+
+  function screenCalculadora() {
+    topbarTitleEl.textContent = "Calculadora de términos";
+    setBack(true);
+    setActiveNav("recursos");
+
+    screenEl.innerHTML = `
+      <div class="hero">
+        <h2>📅 Calculadora de términos procesales</h2>
+        <p>Calcula la fecha límite de un plazo en Colombia, contando días hábiles (excluye fines de semana y festivos) o días calendario.</p>
+      </div>
+      <div class="calc-card">
+        <label class="calc-label" for="calcFecha">Fecha de inicio</label>
+        <input type="date" id="calcFecha" class="notes-textarea calc-input" />
+        <label class="calc-label" for="calcDias">Cantidad de días</label>
+        <input type="number" id="calcDias" class="notes-textarea calc-input" min="1" value="10" />
+        <label class="calc-label" for="calcTipo">Tipo de días</label>
+        <select id="calcTipo" class="notes-textarea calc-input">
+          <option value="habiles">Hábiles (excluye fines de semana y festivos)</option>
+          <option value="calendario">Calendario (todos los días)</option>
+        </select>
+        <button class="hero-cta" id="calcBtn">Calcular</button>
+        <p class="calc-resultado" id="calcResultado" hidden></p>
+      </div>
+      <p class="disclaimer">Herramienta de referencia general. Algunos trámites tienen reglas especiales de conteo (por ejemplo, notificación por estado o por conducta concluyente) — confirma siempre las reglas propias de tu proceso.</p>
+    `;
+
+    const fechaInput = document.getElementById("calcFecha");
+    fechaInput.value = new Date().toISOString().slice(0, 10);
+
+    document.getElementById("calcBtn").addEventListener("click", () => {
+      const fechaStr = fechaInput.value;
+      const dias = parseInt(document.getElementById("calcDias").value, 10);
+      const tipo = document.getElementById("calcTipo").value;
+      const resultadoEl = document.getElementById("calcResultado");
+      if (!fechaStr || !dias || dias < 1) {
+        resultadoEl.hidden = false;
+        resultadoEl.textContent = "Completa una fecha de inicio y una cantidad de días válida.";
+        return;
+      }
+      const limite = calcularFechaLimite(fechaStr, dias, tipo);
+      const formato = limite.toLocaleDateString("es-CO", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      resultadoEl.hidden = false;
+      resultadoEl.innerHTML = `La fecha límite es: <strong>${formato}</strong>`;
+    });
+  }
+
+  function screenPlantillas() {
+    topbarTitleEl.textContent = "Modelos de documentos";
+    setBack(true);
+    setActiveNav("recursos");
+
+    const items = PLANTILLAS.map(
+      (p) => `
+      <button class="topic-card" data-plantilla="${p.id}">
+        <span class="topic-card-body">
+          <p class="topic-card-title">${escapeHtml(p.titulo)}</p>
+          <p class="topic-card-summary">${escapeHtml(p.resumen)}</p>
+        </span>
+        <span class="chevron">›</span>
+      </button>`
+    ).join("");
+
+    screenEl.innerHTML = `
+      <div class="hero">
+        <h2>📄 Modelos de documentos</h2>
+        <p>Plantillas listas para adaptar a tu caso. No reemplazan la revisión de un abogado para una situación concreta.</p>
+      </div>
+      <div class="topic-list">${items}</div>
+    `;
+
+    screenEl.querySelectorAll("[data-plantilla]").forEach((btn) => {
+      btn.addEventListener("click", () => navigate("/plantilla/" + btn.dataset.plantilla));
+    });
+  }
+
+  function screenPlantilla(plantillaId) {
+    const plantilla = PLANTILLAS.find((p) => p.id === plantillaId);
+    if (!plantilla) return navigate("/plantillas");
+
+    topbarTitleEl.textContent = plantilla.titulo;
+    setBack(true);
+    setActiveNav("recursos");
+
+    screenEl.innerHTML = `
+      <div class="hero">
+        <h2>📄 ${escapeHtml(plantilla.titulo)}</h2>
+        <p>${escapeHtml(plantilla.guia)}</p>
+      </div>
+      <div class="content-card">
+        <pre class="plantilla-texto" id="plantillaTexto">${escapeHtml(plantilla.texto)}</pre>
+      </div>
+      <button class="hero-cta" id="plantillaCopiarBtn">📋 Copiar texto</button>
+      <p class="disclaimer">Contenido educativo. Complétalo con los datos reales de tu caso y, si el trámite lo requiere, revísalo con un abogado antes de presentarlo.</p>
+    `;
+
+    document.getElementById("plantillaCopiarBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(plantilla.texto);
+        mostrarToast("✓ Texto copiado");
+      } catch {
+        mostrarToast("No se pudo copiar automáticamente — selecciona el texto manualmente.");
+      }
+    });
   }
 
   function screenAcerca() {
@@ -1668,6 +1950,9 @@
     else if (route.name === "examen-capitulo") screenExamenCapitulo(route.nivelId, route.temaId);
     else if (route.name === "quiz") screenQuiz(route.nivelId);
     else if (route.name === "recursos") screenRecursos();
+    else if (route.name === "calculadora") screenCalculadora();
+    else if (route.name === "plantillas") screenPlantillas();
+    else if (route.name === "plantilla") screenPlantilla(route.plantillaId);
     else if (route.name === "acerca") screenAcerca();
     else if (route.name === "glosario") screenGlosario();
     else if (route.name === "guardados") screenGuardados();
