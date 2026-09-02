@@ -140,20 +140,26 @@
   // 4. Para el desbloqueo automático (sin que copien ningún código): en el producto,
   //    en "Content" → "Redirect to URL after successful purchase", pon:
   //    https://TU-DOMINIO.com/?nivel=experto&license_key={{license_key}}
-  //    (cambia "experto" por "extra" en el producto de Extra). Reemplaza TU-DOMINIO.com
-  //    por tu dominio real una vez publiques la app.
+  //    Reemplaza TU-DOMINIO.com por tu dominio real una vez publiques la app.
+  //
+  // Un solo producto de $2 USD desbloquea TODO (Experto + Extra) — ver NIVELES_INCLUIDOS_EN_PAGO
+  // más abajo. Las dos entradas de PAGOS apuntan al mismo permalink/checkoutUrl a propósito.
   const PAGOS = {
     experto: {
-      precio: "$1 USD",
-      permalink: "TU-PERMALINK-EXPERTO",
-      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-EXPERTO",
+      precio: "$2 USD",
+      permalink: "TU-PERMALINK-TODO",
+      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-TODO",
     },
     extra: {
-      precio: "$3 USD",
-      permalink: "TU-PERMALINK-EXTRA",
-      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-EXTRA",
+      precio: "$2 USD",
+      permalink: "TU-PERMALINK-TODO",
+      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-TODO",
     },
   };
+
+  // Al desbloquear cualquiera de estos niveles con la compra, se desbloquean todos —
+  // es una sola compra de "todo incluido", no dos productos separados.
+  const NIVELES_INCLUIDOS_EN_PAGO = Object.keys(PAGOS);
 
   // Correo de soporte para problemas de pago o licencia — reemplázalo por el tuyo.
   const CORREO_SOPORTE = "tu-correo@ejemplo.com";
@@ -271,7 +277,13 @@
 
   function marcarDesbloqueado(nivelId) {
     const set = cargarDesbloqueos();
-    set.add(nivelId);
+    // Una sola compra de "todo incluido": si el nivel pagado por es uno de los
+    // que cubre el paquete, se desbloquean todos de una vez.
+    if (NIVELES_INCLUIDOS_EN_PAGO.includes(nivelId)) {
+      NIVELES_INCLUIDOS_EN_PAGO.forEach((id) => set.add(id));
+    } else {
+      set.add(nivelId);
+    }
     try {
       localStorage.setItem(DESBLOQUEOS_KEY, JSON.stringify(Array.from(set)));
     } catch {}
@@ -1137,7 +1149,7 @@
       ${
         nivelPago
           ? `<div class="nivel-pago-banner">
-              <p>🔒 Este nivel es de pago (${PAGOS[nivelId].precio}). Puedes desbloquearlo completo, o entrar a cada capítulo y ver un anuncio corto para leerlo gratis, uno por uno.</p>
+              <p>🔒 Este nivel es de pago. Por ${PAGOS[nivelId].precio} desbloqueas Experto y Extra completos de una vez, o puedes entrar a cada capítulo y ver un anuncio corto para leerlo gratis, uno por uno.</p>
               <button class="nivel-pago-banner-btn" id="verPlanesBtn">Ver planes de pago →</button>
             </div>`
           : ""
@@ -1171,6 +1183,10 @@
     const muestraId = MUESTRAS_GRATIS[nivelId];
     const temaMuestra = muestraId ? nivel.temas.find((t) => t.id === muestraId) : null;
     const razones = RAZONES_COMPRA[nivelId] || [];
+    const totalCapitulosIncluidos = NIVELES_INCLUIDOS_EN_PAGO.reduce(
+      (acc, id) => acc + (NIVELES[id] ? NIVELES[id].temas.length : 0),
+      0
+    );
 
     screenEl.innerHTML = `
       <div class="paywall-card" style="--level-color:${nivel.color}">
@@ -1181,9 +1197,9 @@
           <span class="paywall-stat">📚 ${nivel.temas.length} capítulos</span>
           <span class="paywall-stat">⏱ ~${formatDuracion(tiempoLecturaNivel(nivel))}</span>
         </div>
-        <p class="paywall-price">${pago.precio} · pago único, acceso para siempre</p>
+        <p class="paywall-price">${pago.precio} · desbloquea TODO (Experto + Extra, ${totalCapitulosIncluidos} capítulos) · pago único, para siempre</p>
         <a class="hero-cta paywall-buy-btn" id="paywallBuyBtn" href="${pago.checkoutUrl}" target="_blank" rel="noopener noreferrer">
-          Desbloquear por ${pago.precio}
+          Desbloquear todo por ${pago.precio}
         </a>
         ${
           temaMuestra
@@ -1263,7 +1279,7 @@
         <button class="hero-cta paywall-buy-btn" id="verAnuncioBtn">🎬 Ver un anuncio y leer este capítulo gratis</button>
         <p class="paywall-hint" id="anuncioEstado" hidden></p>
         <a class="paywall-sample-btn" href="${pago.checkoutUrl}" target="_blank" rel="noopener noreferrer">
-          O desbloquea todo ${nivel.nombre} por ${pago.precio}
+          O desbloquea todo Toga (Experto + Extra) por ${pago.precio}
         </a>
       </div>
       <p class="paywall-support">¿Ya pagaste? <button class="link-btn" id="verPlanesDesdeCapBtn">Ve a verificar tu código aquí</button></p>
