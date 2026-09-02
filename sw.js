@@ -1,4 +1,4 @@
-const CACHE = "aprende-derecho-v4";
+const CACHE = "aprende-derecho-v5";
 const ASSETS = [
   "./",
   "./index.html",
