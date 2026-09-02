@@ -33,6 +33,66 @@
     <circle cx="60" cy="96" r="3.6" fill="#c98a2c"/>
   </svg>`;
 
+  // ---------- Minijuego "El Juicio": escena de resultado del examen ----------
+  const ESCENA_GANADO_SVG = `<svg viewBox="0 0 200 140" width="200" height="140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="200" height="140" fill="#dff0e4"/>
+    <circle cx="168" cy="26" r="16" fill="#f2d9a8"/>
+    <rect x="0" y="112" width="200" height="28" fill="#1d3a66"/>
+    <g opacity="0.55">
+      <rect x="16" y="58" width="9" height="54" fill="#fff"/>
+      <rect x="34" y="58" width="9" height="54" fill="#fff"/>
+      <rect x="52" y="58" width="9" height="54" fill="#fff"/>
+      <rect x="70" y="58" width="9" height="54" fill="#fff"/>
+      <rect x="10" y="48" width="75" height="10" fill="#fff"/>
+      <path d="M10 48 L47 30 L84 48 Z" fill="#fff"/>
+    </g>
+    <circle cx="128" cy="78" r="11" fill="#f2d9a8"/>
+    <path d="M128 89 L128 110 M128 96 L114 80 M128 96 L142 80 M128 110 L117 124 M128 110 L139 124"
+      stroke="#12213f" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <circle cx="168" cy="86" r="15" fill="#2e7d32"/>
+    <path d="M160 86 L166 92 L177 79" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  const ESCENA_PERDIDO_SVG = `<svg viewBox="0 0 200 140" width="200" height="140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="200" height="140" fill="#12213f"/>
+    <rect x="0" y="112" width="200" height="28" fill="#0a1730"/>
+    <circle cx="102" cy="76" r="11" fill="#a9adb8"/>
+    <path d="M102 87 L102 108 M102 93 L92 102 M102 93 L112 102"
+      stroke="#6b6a72" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <g stroke="#c98a2c" stroke-width="5">
+      <line x1="68" y1="38" x2="68" y2="112"/>
+      <line x1="88" y1="38" x2="88" y2="112"/>
+      <line x1="108" y1="38" x2="108" y2="112"/>
+      <line x1="128" y1="38" x2="128" y2="112"/>
+    </g>
+    <line x1="62" y1="42" x2="134" y2="42" stroke="#c98a2c" stroke-width="5"/>
+    <circle cx="168" cy="60" r="15" fill="#c62828"/>
+    <path d="M161 53 L175 67 M175 53 L161 67" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+  </svg>`;
+
+  function mostrarEscenaJuicio(gano, tituloCapitulo, mensaje) {
+    return `
+      <div class="celebracion ${gano ? "celebracion-gano" : "celebracion-pierde"}" role="status">
+        ${
+          gano
+            ? `<div class="confetti" aria-hidden="true">${Array.from({ length: 18 })
+                .map(
+                  (_, i) =>
+                    `<span class="confetti-piece confetti-piece-${i % 2 === 0 ? "cuadro" : "circulo"}" style="--i:${i}; --hue:${(i * 41) % 360}deg;"></span>`
+                )
+                .join("")}</div>`
+            : ""
+        }
+        <div class="escena-juicio">${gano ? ESCENA_GANADO_SVG : ESCENA_PERDIDO_SVG}</div>
+        <div class="celebracion-mascota-mini">${MASCOTA_SVG}</div>
+        <p class="celebracion-titulo">${gano ? "🏛️ ¡Ganaste el caso!" : "🏛️ Perdiste el caso"}</p>
+        <p class="celebracion-mensaje">
+          ${gano ? "Tu cliente sale libre del juicio de" : "Tu cliente fue condenado en el juicio de"}
+          «${escapeHtml(tituloCapitulo)}». ${escapeHtml(mensaje)}
+        </p>
+      </div>`;
+  }
+
   function mostrarMascotaCelebracion(titulo, mensaje) {
     return `
       <div class="celebracion" role="status">
@@ -1318,9 +1378,9 @@
       ${
         EXAMENES[tema.id]
           ? estaAprobado(tema.id)
-            ? `<p class="exam-status exam-status-ok">✓ Examen de este capítulo aprobado</p>`
+            ? `<p class="exam-status exam-status-ok">🏛️ ✓ Ganaste el caso de este capítulo</p>`
             : intentosRestantesHoy(tema.id) > 0
-              ? `<button class="hero-cta exam-cta" id="examCapituloBtn">📝 Hacer el examen (${intentosRestantesHoy(tema.id)}/${MAX_INTENTOS_DIA} intentos hoy)</button>`
+              ? `<button class="hero-cta exam-cta" id="examCapituloBtn">🏛️ Defender el caso (${intentosRestantesHoy(tema.id)}/${MAX_INTENTOS_DIA} intentos hoy)</button>`
               : `<p class="exam-status">⏳ Sin intentos hoy — vuelve mañana</p>`
           : ""
       }
@@ -1390,7 +1450,7 @@
     if (!puedeVerTema(nivelId, temaId)) return navigate("/tema/" + nivelId + "/" + temaId);
     if (estaAprobado(temaId)) return navigate("/tema/" + nivelId + "/" + temaId);
 
-    topbarTitleEl.textContent = "Examen · " + tema.titulo;
+    topbarTitleEl.textContent = "El juicio · " + tema.titulo;
     setBack(true);
     setActiveNav(null);
 
@@ -1422,9 +1482,9 @@
       .join("");
 
     screenEl.innerHTML = `
-      <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="📝">
-        <h2>📝 Examen: ${escapeHtml(tema.titulo)}</h2>
-        <p>${preguntas.length} preguntas sobre este capítulo. Hay que acertarlas todas para aprobar. Si te queda alguna mal, repasas el capítulo y lo vuelves a intentar. Te quedan <strong>${intentosRestantesHoy(temaId)} de ${MAX_INTENTOS_DIA} intentos hoy</strong> para este capítulo.</p>
+      <div class="level-banner" style="--level-color:${nivel.color}" data-emoji="🏛️">
+        <h2>🏛️ El juicio: ${escapeHtml(tema.titulo)}</h2>
+        <p>Estás defendiendo un caso basado en este capítulo. Responde bien las ${preguntas.length} preguntas y ganas el caso; si te queda alguna mal, tu cliente pierde y hay que repasar antes de volver a intentarlo. Te quedan <strong>${intentosRestantesHoy(temaId)} de ${MAX_INTENTOS_DIA} intentos hoy</strong>.</p>
       </div>
       <div id="examQuestions">${preguntasHtml}</div>
       <div class="quiz-result" id="examResult" hidden>
@@ -1469,14 +1529,18 @@
               marcarAprobado(temaId);
               marcarLeido(temaId, true);
               registrarDiaEstudio();
-              scoreEl.innerHTML = mostrarMascotaCelebracion(
-                "¡Aprobaste el capítulo!",
-                `${correctas} de ${preguntas.length} correctas — Togui está orgullosa de ti.`
+              scoreEl.innerHTML = mostrarEscenaJuicio(
+                true,
+                tema.titulo,
+                `${correctas} de ${preguntas.length} correctas. Togui dice que defendiste bien el caso.`
               );
               continuarBtn.hidden = false;
             } else {
-              scoreEl.textContent =
-                `Obtuviste ${correctas} de ${preguntas.length} correctas — no alcanza. Repasa el capítulo y vuelve a intentarlo.`;
+              scoreEl.innerHTML = mostrarEscenaJuicio(
+                false,
+                tema.titulo,
+                `Obtuviste ${correctas} de ${preguntas.length} correctas — no alcanza. Repasa el capítulo y vuelve a defenderlo.`
+              );
               retryBtn.hidden = false;
             }
           }
