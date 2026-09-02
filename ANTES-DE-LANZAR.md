@@ -6,14 +6,14 @@ La app está lista y funcionando. Solo faltan datos tuyos reales — todo está 
 
 Archivo: `app.js`, busca el bloque `const PAGOS = {`
 
+Un solo producto de **$2 USD desbloquea todo** (nivel Experto + nivel Extra juntos) — no hay dos precios separados.
+
 1. Crea una cuenta gratis en [gumroad.com](https://gumroad.com) con tus datos bancarios.
-2. Crea el producto **"Toga — Nivel Experto"** a **$1 USD**.
-3. Crea el producto **"Toga — Nivel Extra"** a **$3 USD**.
-4. En cada producto, activa **"Generate a unique license key per sale"** (sección Content).
-5. Reemplaza:
-   - `TU-PERMALINK-EXPERTO` → el permalink del primer producto
-   - `TU-PERMALINK-EXTRA` → el permalink del segundo producto
-   - Las dos líneas `checkoutUrl` → la URL completa de cada producto
+2. Crea **un solo producto**: **"Toga — Todo incluido"** a **$2 USD**.
+3. Activa **"Generate a unique license key per sale"** (sección Content).
+4. Reemplaza en las **dos** entradas del bloque `PAGOS` (experto y extra — ambas deben quedar iguales, apuntan al mismo producto):
+   - `TU-PERMALINK-TODO` → el permalink de tu producto
+   - `checkoutUrl` → la URL completa de tu producto
 
 ## 1.0. Para que el dinero te llegue a ti
 
@@ -27,13 +27,14 @@ Esto es lo único que Gumroad no adivina solo — hay que decirle a dónde depos
 
 ## 1.1. Desbloqueo automático al pagar (importante)
 
-Para que la app se desbloquee sola apenas alguien termina de pagar —sin que tengan que copiar ningún código— configura esto en **cada** producto de Gumroad:
+Para que la app se desbloquee sola apenas alguien termina de pagar —sin que tengan que copiar ningún código— configura esto en tu producto de Gumroad:
 
 1. Ve al producto → pestaña **Content**.
 2. Busca **"Redirect to URL after successful purchase"**.
 3. Pon esta URL (cambia el dominio cuando ya lo tengas):
-   - Producto Experto: `https://TU-DOMINIO.com/?nivel=experto&license_key={{license_key}}`
-   - Producto Extra: `https://TU-DOMINIO.com/?nivel=extra&license_key={{license_key}}`
+   `https://TU-DOMINIO.com/?nivel=experto&license_key={{license_key}}`
+
+   (Aunque diga "experto", como es un solo producto que lo desbloquea todo, con eso alcanza — no hace falta una segunda URL.)
 
 Con esto, en cuanto alguien paga, Gumroad lo manda de vuelta a tu app con su código ya incluido en el enlace, y la app lo detecta y desbloquea automáticamente. Si por alguna razón esto falla (cerró la pestaña muy rápido, etc.), la app también deja pegar el código a mano como respaldo — así que el correo de licencia que Gumroad manda automáticamente sigue siendo útil como plan B, no hay que desactivarlo.
 
