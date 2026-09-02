@@ -155,6 +155,71 @@
     return entrada ? entrada.nivelRecomendado : null;
   }
 
+  // Capítulos puntuales relacionados con cada área de interés elegida en el onboarding.
+  const ESPECIALIDAD_TEMAS = {
+    "Derecho Penal": [
+      { nivelId: "intermedio", temaId: "derecho-penal" },
+      { nivelId: "experto", temaId: "procesal-penal-avanzado" },
+      { nivelId: "experto", temaId: "derecho-penal-economico-extincion-dominio" },
+      { nivelId: "experto", temaId: "ciberseguridad-derecho-penal-informatico" },
+      { nivelId: "experto", temaId: "responsabilidad-penal-personas-juridicas" },
+    ],
+    "Derecho Civil": [
+      { nivelId: "intermedio", temaId: "obligaciones-contratos" },
+      { nivelId: "intermedio", temaId: "derechos-reales-propiedad" },
+      { nivelId: "intermedio", temaId: "sucesiones-herencias" },
+      { nivelId: "intermedio", temaId: "codigo-general-del-proceso" },
+      { nivelId: "experto", temaId: "prescripcion-caducidad-profundidad" },
+    ],
+    "Derecho Laboral": [
+      { nivelId: "intermedio", temaId: "derecho-laboral" },
+      { nivelId: "intermedio", temaId: "seguridad-social-integral" },
+      { nivelId: "intermedio", temaId: "contratacion-laboral-especial" },
+      { nivelId: "intermedio", temaId: "salud-ocupacional-detalle" },
+      { nivelId: "experto", temaId: "cooperativas-trabajo-asociado" },
+    ],
+    "Derecho Corporativo / Empresarial": [
+      { nivelId: "intermedio", temaId: "derecho-comercial" },
+      { nivelId: "experto", temaId: "gobierno-corporativo-compliance" },
+      { nivelId: "experto", temaId: "fusiones-adquisiciones-ma" },
+      { nivelId: "experto", temaId: "gobierno-corporativo-sas-avanzado" },
+      { nivelId: "experto", temaId: "escision-transformacion-societaria" },
+    ],
+    "Derechos Humanos": [
+      { nivelId: "intermedio", temaId: "accion-tutela-profundidad" },
+      { nivelId: "experto", temaId: "habeas-corpus-garantias-judiciales" },
+      { nivelId: "experto", temaId: "justicia-transicional-jep-profundidad" },
+      { nivelId: "experto", temaId: "derecho-internacional-humanitario-conflicto" },
+      { nivelId: "experto", temaId: "consulta-previa-comunidades-etnicas" },
+    ],
+    "Derecho Público / Administrativo": [
+      { nivelId: "intermedio", temaId: "derecho-administrativo" },
+      { nivelId: "intermedio", temaId: "contratacion-estatal-basica" },
+      { nivelId: "experto", temaId: "responsabilidad-estado" },
+      { nivelId: "experto", temaId: "regimen-disciplinario-servidores-publicos" },
+      { nivelId: "experto", temaId: "alianzas-publico-privadas-infraestructura" },
+    ],
+    "Litigio en general": [
+      { nivelId: "intermedio", temaId: "proceso-judicial-paso-a-paso" },
+      { nivelId: "experto", temaId: "derecho-probatorio-avanzado" },
+      { nivelId: "experto", temaId: "argumentacion-juridica" },
+      { nivelId: "experto", temaId: "litigio-estrategico" },
+      { nivelId: "extra", temaId: "primer-escrito-judicial-errores-comunes" },
+    ],
+  };
+
+  function temasParaEspecialidad(perfil) {
+    const lista = ESPECIALIDAD_TEMAS[perfil && perfil.especialidad];
+    if (!lista) return [];
+    return lista
+      .map((ref) => {
+        const nivel = NIVELES[ref.nivelId];
+        const tema = nivel && nivel.temas.find((t) => t.id === ref.temaId);
+        return tema ? { nivel, tema } : null;
+      })
+      .filter(Boolean);
+  }
+
   // ---------- Niveles de pago (Gumroad) ----------
   // Reemplaza estos valores por los de tu propio producto en Gumroad:
   // 1. Crea el producto en gumroad.com (gratis), activa "Generate a unique license key per sale".
@@ -1059,6 +1124,7 @@
     const totalLeidosGlobal = niveles.reduce((acc, n) => acc + leidosEnNivel(n), 0);
     const nivelSugerido = totalLeidosGlobal === 0 ? nivelRecomendado(perfil) : null;
     const nivelSugeridoObj = nivelSugerido ? NIVELES[nivelSugerido] : null;
+    const temasEspecialidad = temasParaEspecialidad(perfil);
 
     screenEl.innerHTML = `
       <div class="search-box">
@@ -1093,6 +1159,26 @@
       <div id="levelsSection">
         <div class="section-label">Niveles</div>
         <div class="level-list">${cards}</div>
+        ${
+          temasEspecialidad.length
+            ? `<div class="section-label">Para ti, que te interesa ${escapeHtml(perfil.especialidad)}</div>
+                <div class="topic-list">
+                  ${temasEspecialidad
+                    .map(
+                      ({ nivel, tema }) => `
+                    <button class="topic-card" data-nivel="${nivel.id}" data-tema="${tema.id}">
+                      <span class="topic-index" style="background:${nivel.color}22; color:${nivel.color}">${nivel.icono}</span>
+                      <span class="topic-card-body">
+                        <p class="topic-card-title">${escapeHtml(tema.titulo)}${!estaDesbloqueado(nivel.id) ? ` <span class="level-card-lock">🔒</span>` : ""}</p>
+                        <p class="topic-card-summary">${escapeHtml(nivel.nombre)} · ${escapeHtml(tema.resumen)}</p>
+                      </span>
+                      <span class="chevron">›</span>
+                    </button>`
+                    )
+                    .join("")}
+                </div>`
+            : ""
+        }
         <button class="invite-link" id="inviteLink">📲 Invita a un amigo a estudiar contigo</button>
       </div>
     `;
@@ -1105,6 +1191,10 @@
 
     const recomendadoBtn = document.getElementById("recomendadoBtn");
     if (recomendadoBtn) recomendadoBtn.addEventListener("click", () => navigate("/nivel/" + nivelSugerido));
+
+    screenEl.querySelectorAll("#levelsSection .topic-card").forEach((btn) => {
+      btn.addEventListener("click", () => navigate("/tema/" + btn.dataset.nivel + "/" + btn.dataset.tema));
+    });
 
     document.getElementById("inviteLink").addEventListener("click", () => {
       compartirTexto(
