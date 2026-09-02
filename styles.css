@@ -1284,6 +1284,57 @@ a.paywall-sample-btn { text-decoration: none; }
   word-break: break-all;
 }
 
+/* ---------- Herramientas (calculadora / plantillas) ---------- */
+.tool-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.tool-card:active { transform: scale(0.98); background: #fafaf7; }
+.tool-card-icon { font-size: 1.6rem; flex-shrink: 0; }
+.tool-card-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.tool-card-title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--primary-deep); }
+.tool-card-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+
+.calc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.calc-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin: 12px 0 6px; }
+.calc-label:first-child { margin-top: 0; }
+.calc-input { margin-bottom: 0; min-height: auto; }
+.calc-card .hero-cta { margin-top: 16px; }
+.calc-resultado {
+  margin: 14px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--primary-soft);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.plantilla-texto {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ---------- Acerca de ---------- */
 .about-card {
   position: relative;
