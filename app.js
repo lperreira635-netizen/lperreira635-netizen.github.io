@@ -9,34 +9,42 @@
   const bottomNav = document.getElementById("bottomNav");
   const navItems = Array.from(bottomNav.querySelectorAll(".nav-item"));
 
-  // ---------- Mascota de Toga: "Sabio", el búho togado ----------
-  const MASCOTA_SVG = `<svg viewBox="0 0 120 130" width="84" height="91" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <ellipse cx="30" cy="80" rx="12" ry="20" fill="#0a1730"/>
-    <ellipse cx="90" cy="80" rx="12" ry="20" fill="#0a1730"/>
-    <ellipse cx="60" cy="74" rx="38" ry="34" fill="#1d3a66"/>
-    <circle cx="45" cy="68" r="14" fill="#fff"/>
-    <circle cx="75" cy="68" r="14" fill="#fff"/>
-    <circle cx="45" cy="68" r="6" fill="#12213f"/>
-    <circle cx="75" cy="68" r="6" fill="#12213f"/>
-    <path d="M55 80 L65 80 L60 90 Z" fill="#c98a2c"/>
-    <path d="M46 104 l-5 9 M46 104 l5 9 M74 104 l-5 9 M74 104 l5 9" stroke="#c98a2c" stroke-width="3" stroke-linecap="round"/>
-    <path d="M60 24 L94 38 L60 52 L26 38 Z" fill="#f2d9a8"/>
-    <rect x="30" y="35" width="60" height="6" rx="2" fill="#e8c690" transform="rotate(-1 60 38)"/>
-    <line x1="94" y1="38" x2="94" y2="56" stroke="#c98a2c" stroke-width="2"/>
-    <circle cx="94" cy="58" r="3" fill="#c98a2c"/>
+  // ---------- Mascota de Toga: "Togui", la gata togada ----------
+  const MASCOTA_SVG = `<svg viewBox="0 0 120 120" width="88" height="88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M28 38 L19 8 L49 29 Z" fill="#1d3a66"/>
+    <path d="M92 38 L101 8 L71 29 Z" fill="#1d3a66"/>
+    <path d="M31 33 L25 15 L45 29 Z" fill="#0a1730"/>
+    <path d="M89 33 L95 15 L75 29 Z" fill="#0a1730"/>
+    <circle cx="60" cy="60" r="40" fill="#1d3a66"/>
+    <ellipse cx="60" cy="70" rx="27" ry="21" fill="#faf7f1"/>
+    <circle cx="47" cy="58" r="6.2" fill="#12213f"/>
+    <circle cx="73" cy="58" r="6.2" fill="#12213f"/>
+    <circle cx="49.2" cy="55.8" r="1.7" fill="#fff"/>
+    <circle cx="75.2" cy="55.8" r="1.7" fill="#fff"/>
+    <path d="M56 68 L64 68 L60 74 Z" fill="#e0879b"/>
+    <path d="M60 74 Q53 81 45 76 M60 74 Q67 81 75 76" stroke="#0a1730" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g stroke="#0a1730" stroke-width="1.5" stroke-linecap="round" opacity="0.75">
+      <line x1="17" y1="66" x2="41" y2="69"/>
+      <line x1="17" y1="75" x2="41" y2="75"/>
+      <line x1="103" y1="66" x2="79" y2="69"/>
+      <line x1="103" y1="75" x2="79" y2="75"/>
+    </g>
+    <path d="M38 94 Q60 108 82 94 L75 85 Q60 94 45 85 Z" fill="#f2d9a8"/>
+    <circle cx="60" cy="96" r="3.6" fill="#c98a2c"/>
   </svg>`;
 
   function mostrarMascotaCelebracion(titulo, mensaje) {
     return `
       <div class="celebracion" role="status">
         <div class="confetti" aria-hidden="true">
-          ${Array.from({ length: 14 })
+          ${Array.from({ length: 18 })
             .map(
               (_, i) =>
-                `<span class="confetti-piece" style="--i:${i}; --hue:${(i * 47) % 360}deg;"></span>`
+                `<span class="confetti-piece confetti-piece-${i % 2 === 0 ? "cuadro" : "circulo"}" style="--i:${i}; --hue:${(i * 41) % 360}deg;"></span>`
             )
             .join("")}
         </div>
+        <div class="celebracion-glow" aria-hidden="true"></div>
         <div class="celebracion-mascota">${MASCOTA_SVG}</div>
         <p class="celebracion-titulo">${escapeHtml(titulo)}</p>
         <p class="celebracion-mensaje">${escapeHtml(mensaje)}</p>
@@ -1380,6 +1388,7 @@
     const preguntas = EXAMENES[temaId];
     if (!nivel || !tema || !preguntas || !preguntas.length) return navigate("/tema/" + nivelId + "/" + temaId);
     if (!puedeVerTema(nivelId, temaId)) return navigate("/tema/" + nivelId + "/" + temaId);
+    if (estaAprobado(temaId)) return navigate("/tema/" + nivelId + "/" + temaId);
 
     topbarTitleEl.textContent = "Examen · " + tema.titulo;
     setBack(true);
@@ -1462,7 +1471,7 @@
               registrarDiaEstudio();
               scoreEl.innerHTML = mostrarMascotaCelebracion(
                 "¡Aprobaste el capítulo!",
-                `${correctas} de ${preguntas.length} correctas — Sabio está orgulloso de ti.`
+                `${correctas} de ${preguntas.length} correctas — Togui está orgullosa de ti.`
               );
               continuarBtn.hidden = false;
             } else {
@@ -1694,7 +1703,7 @@
     screenEl.innerHTML = `
       ${mostrarMascotaCelebracion(
         "¡Nivel completo!",
-        `Aprobaste los exámenes de los ${nivel.temas.length} capítulos de ${nivel.nombre}. Sabio dice que ya te ganaste el certificado.`
+        `Aprobaste los exámenes de los ${nivel.temas.length} capítulos de ${nivel.nombre}. Togui dice que ya te ganaste el certificado.`
       )}
       <div class="certificate" style="--level-color:${nivel.color}">
         <span class="certificate-emoji">🏆</span>
@@ -1828,7 +1837,7 @@
             if (correctos >= Math.ceil(CASOS_PRACTICOS.length * 0.8)) {
               scoreEl.innerHTML = mostrarMascotaCelebracion(
                 "¡Excelente criterio!",
-                `${correctos} de ${CASOS_PRACTICOS.length} casos resueltos bien. Sabio dice que ya piensas como abogado.`
+                `${correctos} de ${CASOS_PRACTICOS.length} casos resueltos bien. Togui dice que ya piensas como abogado.`
               );
             } else {
               scoreEl.textContent = `Resolviste ${correctos} de ${CASOS_PRACTICOS.length} casos. Revisa las explicaciones y vuelve a intentarlo cuando quieras.`;
