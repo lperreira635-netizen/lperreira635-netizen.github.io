@@ -1,10 +1,11 @@
-const CACHE = "aprende-derecho-v2";
+const CACHE = "aprende-derecho-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./content.js",
   "./learn.js",
+  "./exams.js",
   "./app.js",
   "./manifest.json",
   "./icon.svg",
