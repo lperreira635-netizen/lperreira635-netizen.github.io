@@ -1196,6 +1196,16 @@ a.paywall-sample-btn { text-decoration: none; }
   text-align: center;
 }
 .mark-read-btn:active { background: var(--primary-soft); }
+.exam-cta { display: block; width: 100%; margin-top: 10px; text-align: center; text-decoration: none; }
+.exam-status {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+.exam-status-ok { color: #2e7d32; background: #d9f2df; }
 .mark-read-btn-done {
   border-style: solid;
   border-color: #2e7d32;
