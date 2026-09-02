@@ -273,6 +273,8 @@ textarea:focus-visible {
   font: inherit;
   font-size: 0.92rem;
 }
+.onboard-title-sub { margin-top: 14px; font-size: 0.86rem; }
+select.onboard-input { cursor: pointer; }
 .onboard-input::placeholder { color: rgba(255,255,255,0.55); }
 .onboard-input:focus { outline: none; border-color: var(--accent-light); background: rgba(255,255,255,0.16); }
 .onboard-hint {
@@ -992,6 +994,26 @@ a.paywall-sample-btn { text-decoration: none; }
   text-align: center;
 }
 .invite-link:active { background: var(--primary-soft); border-color: var(--accent); color: var(--primary-deep); }
+
+.recomendado-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--primary-soft);
+  border: 1.5px dashed var(--level-color, var(--accent));
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+.recomendado-emoji { font-size: 1.6rem; flex-shrink: 0; }
+.recomendado-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.recomendado-titulo { font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: var(--primary-deep); }
+.recomendado-texto { font-size: 0.78rem; color: var(--text-muted); }
 
 .milestone-banner {
   display: flex;
