@@ -132,6 +132,29 @@
     return (nombreCompleto || "").trim().split(/\s+/)[0] || "";
   }
 
+  const ESPECIALIDADES = [
+    "Aún no lo sé",
+    "Derecho Penal",
+    "Derecho Civil",
+    "Derecho Laboral",
+    "Derecho Corporativo / Empresarial",
+    "Derechos Humanos",
+    "Derecho Público / Administrativo",
+    "Litigio en general",
+  ];
+
+  const NIVELES_EXPERIENCIA = [
+    { id: "cero", etiqueta: "Estoy empezando de cero", nivelRecomendado: "principiante" },
+    { id: "basico", etiqueta: "Ya sé lo básico", nivelRecomendado: "intermedio" },
+    { id: "avanzado", etiqueta: "Soy estudiante avanzado", nivelRecomendado: "experto" },
+    { id: "abogado", etiqueta: "Ya ejerzo como abogado", nivelRecomendado: "experto" },
+  ];
+
+  function nivelRecomendado(perfil) {
+    const entrada = NIVELES_EXPERIENCIA.find((e) => e.id === (perfil && perfil.experiencia));
+    return entrada ? entrada.nivelRecomendado : null;
+  }
+
   // ---------- Niveles de pago (Gumroad) ----------
   // Reemplaza estos valores por los de tu propio producto en Gumroad:
   // 1. Crea el producto en gumroad.com (gratis), activa "Generate a unique license key per sale".
@@ -949,7 +972,20 @@
             <p class="onboard-title">Antes de entrar, ¿cómo te llamas?</p>
             <input type="text" id="onboardNombre" class="onboard-input" placeholder="Tu nombre" autocomplete="name" />
             <input type="email" id="onboardCorreo" class="onboard-input" placeholder="Tu correo (opcional)" autocomplete="email" />
-            <p class="onboard-hint">Se usa para saludarte y personalizar tus certificados. Se queda solo en tu dispositivo — no se envía a ningún servidor. Si más adelante desbloqueas Experto o Extra, usa el mismo correo con el que compres en Gumroad para que todo quede junto.</p>
+
+            <p class="onboard-title onboard-title-sub">¿Qué tipo de abogado te gustaría ser?</p>
+            <select id="onboardEspecialidad" class="onboard-input">
+              ${ESPECIALIDADES.map((e) => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join("")}
+            </select>
+
+            <p class="onboard-title onboard-title-sub">¿Cómo describirías dónde estás hoy?</p>
+            <select id="onboardExperiencia" class="onboard-input">
+              ${NIVELES_EXPERIENCIA.map(
+                (e) => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.etiqueta)}</option>`
+              ).join("")}
+            </select>
+
+            <p class="onboard-hint">Todo esto se usa solo para saludarte, personalizar tus certificados y recomendarte por dónde empezar. Se queda en tu dispositivo — no se envía a ningún servidor. Si más adelante desbloqueas Experto o Extra, usa el mismo correo con el que compres en Gumroad para que todo quede junto.</p>
             <button class="hero-cta hero-cta-glow" id="comenzarBtn">Comenzar mi camino →</button>
             <p class="onboard-error" id="onboardError" hidden></p>
           </div>`
@@ -971,13 +1007,15 @@
       comenzarBtn.addEventListener("click", () => {
         const nombre = document.getElementById("onboardNombre").value.trim();
         const correo = document.getElementById("onboardCorreo").value.trim();
+        const especialidad = document.getElementById("onboardEspecialidad").value;
+        const experiencia = document.getElementById("onboardExperiencia").value;
         const errorEl = document.getElementById("onboardError");
         if (nombre.length < 2) {
           errorEl.textContent = "Escribe al menos tu nombre para continuar.";
           errorEl.hidden = false;
           return;
         }
-        guardarPerfil({ nombre, correo });
+        guardarPerfil({ nombre, correo, especialidad, experiencia });
         navigate("/inicio");
       });
     }
@@ -1017,11 +1055,28 @@
     const hayNivelPorDesbloquear = !estaDesbloqueado("experto") || !estaDesbloqueado("extra");
     const mostrarInvitacion = gratisCompleto && hayNivelPorDesbloquear;
 
+    const perfil = cargarPerfil();
+    const totalLeidosGlobal = niveles.reduce((acc, n) => acc + leidosEnNivel(n), 0);
+    const nivelSugerido = totalLeidosGlobal === 0 ? nivelRecomendado(perfil) : null;
+    const nivelSugeridoObj = nivelSugerido ? NIVELES[nivelSugerido] : null;
+
     screenEl.innerHTML = `
       <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="search" id="searchInput" class="search-input" placeholder="Buscar en los ${totalCapitulos} capítulos…" autocomplete="off" />
       </div>
+      ${
+        nivelSugeridoObj
+          ? `<button class="recomendado-banner" id="recomendadoBtn" style="--level-color:${nivelSugeridoObj.color}">
+              <span class="recomendado-emoji">${nivelSugeridoObj.icono}</span>
+              <span class="recomendado-body">
+                <span class="recomendado-titulo">Te recomendamos empezar en ${escapeHtml(nivelSugeridoObj.nombre)}</span>
+                <span class="recomendado-texto">Según lo que nos contaste, es el mejor punto de partida para ti.</span>
+              </span>
+              <span class="chevron">›</span>
+            </button>`
+          : ""
+      }
       ${numFavoritos ? `<button class="guardados-link" id="guardadosLink">⭐ Ver mis ${numFavoritos} capítulo${numFavoritos === 1 ? "" : "s"} guardado${numFavoritos === 1 ? "" : "s"}</button>` : ""}
       ${
         mostrarInvitacion
@@ -1047,6 +1102,9 @@
     });
     const guardadosLink = document.getElementById("guardadosLink");
     if (guardadosLink) guardadosLink.addEventListener("click", () => navigate("/guardados"));
+
+    const recomendadoBtn = document.getElementById("recomendadoBtn");
+    if (recomendadoBtn) recomendadoBtn.addEventListener("click", () => navigate("/nivel/" + nivelSugerido));
 
     document.getElementById("inviteLink").addEventListener("click", () => {
       compartirTexto(
