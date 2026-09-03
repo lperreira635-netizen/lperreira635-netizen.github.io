@@ -235,13 +235,13 @@
   const PAGOS = {
     experto: {
       precio: "$2 USD",
-      permalink: "TU-PERMALINK-TODO",
-      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-TODO",
+      permalink: "cgxfg",
+      checkoutUrl: "https://perreira5.gumroad.com/l/cgxfg",
     },
     extra: {
       precio: "$2 USD",
-      permalink: "TU-PERMALINK-TODO",
-      checkoutUrl: "https://TUUSUARIO.gumroad.com/l/TU-PERMALINK-TODO",
+      permalink: "cgxfg",
+      checkoutUrl: "https://perreira5.gumroad.com/l/cgxfg",
     },
   };
 
